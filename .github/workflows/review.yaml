@@ -1,0 +1,42 @@
+name: Claude Code review
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  review:
+    name: Claude Code review
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: read
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Claude Code review
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+
+            このPRをレビューし、コード品質、バグの可能性、セキュリティ、パフォーマンスの観点で日本語でフィードバックしてください。
+            
+            【出力形式】
+            各問題点をリスト形式で:
+            - 重要度: CRITICAL / HIGH / MEDIUM / LOW
+            - 問題: [具体的な問題]
+            - 場所: [行番号または関数名]
+            - 改善案: [修正コードまたは方針]
+
+            レビュー結果は次のルールで投稿してください。
+            - 修正が必要な問題がない場合：
+              gh pr review ${{ github.event.pull_request.number }} --approve -b "<レビューの要約>"
+            - 修正が必要な問題がある場合：
+              gh pr review ${{ github.event.pull_request.number }} --comment -b "<指摘内容>"
+          claude_args: '--allowedTools "Bash(gh pr review:*),Bash(gh pr diff:*),Bash(gh pr view:*)"'
